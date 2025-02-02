@@ -1,9 +1,6 @@
-#!/usr/bin/python3
-
 import tkinter as tk
 import threading
 from funcionesGPS import manejarGPS
-from registro import InterfazRegistro, funcRegistro
 import sqlite3
 import requests
 
@@ -12,14 +9,11 @@ font = ("Helvetica", 12)
 path = 'src/operadores.db'
 
 
-class InterfazMain(tk.Tk, funcRegistro):
+class InterfazMain(tk.Tk):
     """Clase para la generación de la interfaz principal.
-
 
     :param tk: Clase para interfaces con Tkinter
     :type tk: Objeto Tk
-    :param funcRegistro: Clase con funciones/interfaz de registro
-    :type funcRegistro: Objeto funcRegistro
     """
     def __init__(self):
         """Función inicializadora de la interfaz principal.
@@ -45,8 +39,29 @@ class InterfazMain(tk.Tk, funcRegistro):
         self.gps_thread = None
         self.stop_event = threading.Event()
 
-        self.create_database()
+        self.create_database()  # Crear la base de datos si no existe
         self.create_widgets()
+
+    def create_database(self):
+        """Crea la base de datos y la tabla de operadores si no existen.
+        """
+        conn = sqlite3.connect(path)
+        cursor = conn.cursor()
+
+        # Crear la tabla de operadores si no existe
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS operadores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                password TEXT NOT NULL,
+                name TEXT,
+                phone TEXT,
+                email TEXT
+            )
+        ''')
+
+        conn.commit()
+        conn.close()
 
     def create_widgets(self):
         """Crea los objetos de las ventanas de inicio de sesión y
@@ -71,16 +86,13 @@ class InterfazMain(tk.Tk, funcRegistro):
         tk.Entry(self.user_pass_frame, textvariable=self.password,
                  show="*", font=font).pack(side=tk.LEFT, padx=5)
 
-        # Frame para botones de registrar e iniciar
-        self.inic_reg_frame = tk.Frame(self.login_frame, bg="lightblue")
-        self.inic_reg_frame.pack(pady=5)
+        # Frame para botones de iniciar
+        self.inic_frame = tk.Frame(self.login_frame, bg="lightblue")
+        self.inic_frame.pack(pady=5)
 
-        tk.Button(self.inic_reg_frame, text="INICIAR", bg="lightgreen",
+        tk.Button(self.inic_frame, text="INICIAR", bg="lightgreen",
                   fg="black", font=font,
                   command=self.login).pack(side=tk.LEFT, padx=80)
-        tk.Button(self.inic_reg_frame, text="REGISTRARSE", bg="lightgreen",
-                  fg="black", font=font,
-                  command=self.show_registration).pack(side=tk.LEFT, padx=80)
 
         # Label para mostrar mensajes de estado de inicio
         self.status_login = tk.StringVar()
@@ -281,21 +293,6 @@ class InterfazMain(tk.Tk, funcRegistro):
         self.trip_frame.pack_forget()
         self.login_frame.pack(expand=True, fill='both')
         self.keyboard_frame.pack(expand=True, fill='both')
-
-    def show_registration(self):
-        """Cambia a la interfaz de registro.
-        """
-        self.withdraw()
-        # Pass the main window as an argument
-        registration_app = InterfazRegistro(self)
-        registration_app.protocol("WM_DELETE_WINDOW", self.on_closing)
-        registration_app.mainloop()
-
-    def return_to_main(self):
-        """Retorna a interfaz de inicio de sesión de la interfaz de
-        registro.
-        """
-        self.deiconify()
 
     def start_gps(self):
         """Inicia la captura de datos por medio de función de
